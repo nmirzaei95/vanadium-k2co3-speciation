@@ -1,0 +1,266 @@
+\documentclass[onecolumn,aps,prl,floatfix,superscriptaddress,longbibliography,showkeys,fleqn]{revtex4-2}
+\pdfminorversion=3
+
+\usepackage{amsmath}    % need for subequations
+\usepackage{graphicx}   	% need for figures
+\usepackage{verbatim}   	% useful for program listings
+\usepackage{color}      	% use if color is used in text
+\usepackage{longtable}
+\usepackage{subfigure}  	% use for side-by-side figures
+\usepackage{epstopdf}   	% use for hypertext links, including those to external documents and URLs
+\usepackage{bm}
+\usepackage{natbib}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{xcolor}
+\usepackage{hyperref}   	% use for hypertext links, including those to external documents and URLs
+
+
+
+
+\usepackage[version=4]{mhchem}
+
+
+
+
+\makeatletter
+\newenvironment{reaction}[1][Roman]
+{
+	\def\jr@counter{#1}%
+	\jr@setup@numbering{#1}{1}%
+}
+{%
+	\setcounter{jr@\jr@counter @equation}{\value{equation}}%
+	\setcounter{equation}{\value{jr@equation@save}}%
+	\ignorespacesafterend
+}
+\newenvironment{reaction*}[1][Roman]
+{%
+	\def\jr@counter{#1}%
+	\jr@setup@numbering{#1}{0}%
+}
+{%
+	\setcounter{jr@\jr@counter @equation}{\value{equation}}%
+	\setcounter{equation}{\value{jr@equation@save}}%
+	\ignorespacesafterend
+}
+
+\newcounter{jr@equation@save}
+\newcommand{\jr@setup@numbering}[2]{%
+	% define a new counter if not yet done
+	\@ifundefined{c@jr@#1@equation}{\newcounter{jr@#1@equation}}{}%
+	% save the current equation number
+	\setcounter{jr@equation@save}{\value{equation}}%
+	\setcounter{equation}{%
+		\ifnum#2>0
+		\value{jr@#1@equation}%
+		\else
+		0%
+		\fi
+	}%
+	\renewcommand{\theequation}{\csname#1\endcsname{equation}}%
+}
+\makeatother
+
+
+
+
+\begin{document}
+\graphicspath{{./Images/}}
+	
+		
+	
+\title{Resolving the speciation model for aqueous carbonate-vanadate system \\ 
+	\small Complementary to: "Kinetic and mechanistic study of CO$_2$ absorption into vanadium-promoted aqueous K$_2$CO$_3$"}
+\author{Nima Mirzaei}
+\author{Matthaus U. Babler}\email{babler@kth.se}
+\affiliation{Department of Chemical Engineering, KTH Royal Institute of Technology, SE-10044 Stockholm, Sweden}
+\date{\today}
+	
+	
+	
+\maketitle
+	
+	
+
+
+
+
+This text complements the article {\bf Kinetic and mechanistic study of CO$_2$ absorption into vanadium-promoted aqueous K$_2$CO$_3$} \cite{mirzaei2025kinetic} by expanding on the speciation model used therein. The accompanying MATLAB script implements the following workflow:
+
+For a given solvent composition (potassium concentration $C_{\mathrm{K}}$, vanadium concentration $C_{\mathrm{V}}$, solvent loading $\theta$, and temperature $T$), the script calculates the corresponding overall mass transfer coefficient $K_g$, i.e., the CO$_2$ absorption flux corrected for the driving force and vapor-liquid equilibrium.
+
+To this end, the script first estimates multiple physical parameters, namely, diffusivity $D_{\mathrm{CO_2}}$ and Henry constant $H$ of CO$_2$ in the electrolyte (vanadium-promoted aqueous K$_2$CO$_3$), as well as liquid-side mass transfer coefficient $k_L$, using empirical correlations from the literature. The rate constants $k_2$ and $k_v$, describing the reactions of CO$_2$ with OH$^-$ and HVO$_4^{2-}$ respectively, are then calculated using the kinetic models developed in \cite{mirzaei2025kinetic}.
+
+Concentrations of OH$^-$ and HVO$_4^{2-}$ are obtained by solving the mass balances and equilibrium relations of the carbonate-vanadate system. These values, together with $k_2$ and $k_v$, are used to determine the pseudo-first order rate constant $k_1$, which in turn yields $K_g$.
+For the detailed derivations relating $K_g$ to $k_1$, solvent composition, and physical properties, the reader is referred to the main article and its supporting material \cite{mirzaei2025kinetic}.
+
+The remainder of this document describes the procedure for resolving the speciation model of the solvent.	
+	
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%%  Introduction
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Governing balances and equilibria}\label{sec:governing}
+	
+An aqueous solution of potassium carbonate and vanadium pentoxide is governed by the following equilibria \cite{imle2013solubility,crans1998chemistry}:
+
+
+
+
+{\footnotesize
+	
+	\begin{reaction}
+		\begin{align}
+			&	\ce{CO2}+\ce{H2O} \rightleftharpoons \ce{HCO3-}+\ce{H+}	&&	K_1 = \frac{[\ce{HCO3-}][\ce{H+}]}{[\ce{CO2}]}	&&	[\ce{CO2}] = \frac{[\ce{H+}]}{K_1}[\ce{HCO3-}]	\label{rxn:CO2.H2O}	\\
+			&	\ce{HCO3-} \rightleftharpoons \ce{CO3^2-}+\ce{H+} &&	K_2 = \frac{[\ce{CO3^2-}][\ce{H+}]}{[\ce{HCO3-}]}	&&	[\ce{HCO3-}] = \frac{[\ce{H+}]}{K_2}[\ce{CO3^2-}]	\label{rxn:HCO3} \\
+			&	\ce{H2O} \rightleftharpoons \ce{OH-}+\ce{H+} &&	K_w = [\ce{OH-}][\ce{H+}]	&&	[\ce{OH-}] = \frac{K_w}{[\ce{H+}]}		\label{rxn:H2O}		\\
+			&	2\ce{H2VO4-} \rightleftharpoons \ce{V2O7^4-}+2\ce{H+}+\ce{H2O}	&&	K_3 = \frac{[\ce{V2O7^4-}][\ce{H+}]^2}{[\ce{H2VO4-}]^2}	&&	[\ce{V2O7^4-}] = \frac{K_3}{[\ce{H+}]^2}[\ce{H2VO4-}]^2	\\
+			&	2\ce{H2VO4-} \rightleftharpoons \ce{HV2O7^3-}+\ce{H+}+\ce{H2O}	&&	K_4 = \frac{[\ce{HV2O7^3-}][\ce{H+}]}{[\ce{H2VO4-}]^2}	&&	[\ce{HV2O7^3-}] = \frac{K_4}{[\ce{H+}]}[\ce{H2VO4-}]^2	\\
+			&	2\ce{H2VO4-} \rightleftharpoons \ce{H2V2O7^2-}+\ce{H2O}	&&	K_5 = \frac{[\ce{H2V2O7^2-}]}{[\ce{H2VO4-}]^2}	&&	[\ce{H2V2O7^2-}] = K_5[\ce{H2VO4-}]^2	\\
+			&	3\ce{H2VO4-} \rightleftharpoons \ce{HV3O10^4-}+\ce{H+}+\ce{H2O}	&&	K_6 = \frac{[\ce{HV3O10^4-}][\ce{H+}]}{[\ce{H2VO4-}]^3}	&&	[\ce{HV3O10^4-}] = \frac{K_6}{[\ce{H+}]}[\ce{H2VO4-}]^3	\\
+			&	4\ce{H2VO4-} \rightleftharpoons \ce{V4O13^6-}+2\ce{H+}+3\ce{H2O}	&&	K_7 = \frac{[\ce{V4O13^6-}][\ce{H+}]^2}{[\ce{H2VO4-}]^4}	&&	[\ce{V4O13^6-}] = \frac{K_7}{[\ce{H+}]^2}[\ce{H2VO4-}]^4	\\
+			&	4\ce{H2VO4-} \rightleftharpoons \ce{V4O12^4-}+4\ce{H2O}	&&	K_8 = \frac{[\ce{V4O12^4-}]}{[\ce{H2VO4-}]^4}	&&	[\ce{V4O12^4-}] = K_8[\ce{H2VO4-}]^4	\\
+			&	5\ce{H2VO4-} \rightleftharpoons \ce{V5O15^5-}+5\ce{H2O}	&&	K_9 = \frac{[\ce{V5O15^5-}]}{[\ce{H2VO4-}]^5}	&&	[\ce{V5O15^5-}] = K_9[\ce{H2VO4-}]^5
+		\end{align}
+	\end{reaction}
+}
+
+
+
+
+
+
+
+
+
+{\footnotesize
+
+\begin{reaction}
+\begin{align}
+&	\ce{H3VO4} \rightleftharpoons \ce{H2VO4-}+\ce{H+}	&&	K_{v_1} = \frac{[\ce{H2VO4-}][\ce{H+}]}{[\ce{H3VO4}]}	&&	[\ce{H3VO4}] = \frac{[\ce{H+}]}{K_{v_1}}[\ce{H2VO4-}]	\\
+&	\ce{H2VO4-} \rightleftharpoons \ce{HVO4^2-}+\ce{H+}	&&	K_{v_2} = \frac{[\ce{HVO4^2-}][\ce{H+}]}{[\ce{H2VO4-}]}	&&	[\ce{HVO4^2-}] = \frac{K_{v_2}}{[\ce{H+}]}[\ce{H2VO4-}]	\\
+&	\ce{HVO4^2-} \rightleftharpoons \ce{VO4^3-}+\ce{H+}	&&	K_{v_3} = \frac{[\ce{VO4^3-}][\ce{H+}]}{[\ce{HVO4^2-}]}	&&	[\ce{VO4^3-}] = \frac{K_{v_3}}{[\ce{H+}]}[\ce{HVO4^2-}]
+\end{align}
+\end{reaction}
+}
+
+
+
+
+
+Complexes between carbonates and vanadates are governed by the following equilibria:
+{\small
+\begin{equation*}
+	\ce{H2VO4-}+\ce{CO3^2-}+\ce{H+} \rightleftharpoons \ce{HVO4CO2^2-}+\ce{H2O}
+\end{equation*}
+\vspace{-0.6cm}
+\begin{reaction}
+	\begin{align}
+		& K_{vc_1}=\frac{[\ce{HVO4CO2^2-}]}{[\ce{H2VO4-}][\ce{CO3^2-}][\ce{H+}]}	&&
+		[\ce{HVO4CO2^2-}] = K_{vc_1}[\ce{H+}][\ce{H2VO4-}][\ce{CO3^2-}]
+	\end{align}
+\end{reaction}
+	
+\begin{equation*}
+	\ce{H2VO4-}+2\ce{CO3^2-}+2\ce{H+} \rightleftharpoons \ce{HVO4(CO2)_2^3-}+2\ce{H2O}
+\end{equation*}
+\vspace{-0.6cm}
+\begin{reaction}
+	\begin{align}
+		& K_{vc_2}=\frac{[\ce{VO4(CO2)_2^3-}]}{[\ce{H2VO4-}][\ce{CO3^2-}]^2[\ce{H+}]^2}	&&
+		[\ce{HVO4(CO2)_2^3-}] = K_{vc_2}[\ce{H+}]^2[\ce{H2VO4-}][\ce{CO3^2-}]^2			\label{rxn:VC2}
+	\end{align}
+\end{reaction}
+}
+
+Charge, vanadium, and carbon balance respectively give:
+\begin{multline}
+	C_{\mathrm{K}}+[\ce{H+}] = 2[\ce{CO3^2-}]+[\ce{HCO3-}]+[\ce{H2VO4-}]+2[\ce{HVO4^2-}]	\\
+	+3[\ce{VO4^3-}]+4[\ce{V2O7^4-}]+3[\ce{HV2O7^3-}]+ 2[\ce{H2V2O7^2-}] \\
+	+4[\ce{HV3O10^4-}]+6[\ce{V4O13^6-}]+4[\ce{V4O12^4-}]+5[\ce{V5O15^5-}]	\\
+	+2[\ce{HVO4CO2^2-}]+3[\ce{HVO4(CO2)2^3-}]+[\ce{OH-}]
+	\label{eq:charge}
+\end{multline}
+\begin{multline}
+	C_{\mathrm{V}} = [\ce{H3VO4}]+[\ce{H2VO4-}]+[\ce{HVO4^2-}]+[\ce{VO4^3-}]+2[\ce{V2O7^4-}]+2[\ce{HV2O7^3-}] \\
+	+2[\ce{H2V2O7^2-}]+3[\ce{HV3O10^4-}]+4[\ce{V4O13^6-}]+4[\ce{V4O12^4-}]+5[\ce{V5O15^5-}] \\
+	+[\ce{HVO4CO2^2-}]+[\ce{HVO4(CO2)2^3-}]
+	\label{eq:vanadium}
+\end{multline}
+\begin{equation}
+	C_{\mathrm{carbon}} = \frac{1}{2}C_{\mathrm{K}}(1+\theta) = [\ce{CO3^2-}]+[\ce{HCO3-}]+[\ce{CO2}]+[\ce{HVO4CO2^2-}]+2[\ce{HVO4(CO2)2^3-}]
+	\label{eq:carbon}
+\end{equation}
+
+
+
+
+
+\section{Approach for solving the equilibria}
+The system comprises 18 equations (15 mass-action laws, 2 mass balances, and 1 charge balance) for 18 unknown species concentrations (3 carbonates, 11 vanadates, 2 carbonato-vanadate complexes, protons and hydroxides). These are constrained by the given potassium, vanadium, and carbon concentrations, as well as temperature.
+
+A direct solution to this system, while not impossible, is burdensome given the large variation in magnitudes of these species. Instead, we reformulate the problem by selecting a single species concentration, here H$^+$, as the independent variable. All other concentrations are then back-calculated accordingly. In this way, $C_{\mathrm{carbon}}$ is replaced by pH as the degree of freedom, and the corresponding solvent loading $\theta$ is subsequently obtained. Protons concentration (pH) is an ideal degree of freedom due to the large variations in its magnitude with $\theta$.
+
+As demonstrated shortly, for a given pH, the entire equilibria can be reduced into a single equation, which can be solved efficiently using numerical methods. By applying a matrix-based implementation in MATLAB or Python, species concentration and $\theta$ are computed across a high-resolution pH grid. The target pH is the obtained by interpolation of this precomputed "database". In the MATLAB script, we provide a working example which follows this algorithm.
+
+
+
+
+
+
+\section{Simplification}
+
+For a given $pH$, the concentrations of H$^+$ and OH$^-$ are directly obtained as:
+\begin{align}
+	[\mathrm{H^+}] = 10^{-\mathrm{pH}}			&	&		[\mathrm{OH^-}]=K_w/[\mathrm{H^+}]
+\end{align}
+
+The charge and vanadium balances (eqs. (\ref{eq:charge}) and (\ref{eq:vanadium})) are rewritten by substituting the corresponding mass-action laws (eqs. (\ref{rxn:CO2.H2O})-(\ref{rxn:VC2})), reducing these equations to polynomial functions of [H$_2$VO$_4^-$]:
+\begin{multline}
+	C_{\mathrm{K}} + [\ce{H+}] - [\ce{OH-}] = 2[\ce{CO3^2-}] + \frac{[\ce{H+}]}{K_2}[\ce{CO3^2-}] \\
+	+ 2K_{vc_1}[\ce{H+}][\ce{H2VO4-}][\ce{CO3^2-}] + 3K_{vc_2}[\ce{H+}]^2[\ce{H2VO4-}][\ce{CO3^2-}]^2 \\
+	+ [\ce{H2VO4-}]\overbrace{\left\{1+2\frac{K_{v_2}}{[\ce{H+}]}+3\frac{K_{v_2}K_{v_3}}{[\ce{H+}]^2}\right\}}^{\alpha_1} + [\ce{H2VO4-}]^2\overbrace{\left\{4\frac{K_3}{[\ce{H+}]^2} + 3\frac{K_4}{[\ce{H+}]} + 2K_5\right\}}^{\alpha_2} \\
+	+ [\ce{H2VO4-}]^3 \underbrace{\left\{4\frac{K_6}{[\ce{H+}]}\right\}}_{\alpha_3} + [\ce{H2VO4-}]^4 \underbrace{\left\{ 6\frac{K_7}{[\ce{H+}]^2}+4K_8\right\}}_{\alpha_4} + [\ce{H2VO4-}]^5 \underbrace{\left\{5K_9\right\}}_{\alpha_5}						\label{eq:charge2}
+\end{multline}
+\begin{multline}
+	C_{\mathrm{V}} = K_{vc_1}[\ce{H+}][\ce{H2VO4-}][\ce{CO3^2-}] + K_{vc_2}[\ce{H+}]^2[\ce{H2VO4-}][\ce{CO3^2-}]^2 \\
+	+ [\ce{H2VO4-}] \overbrace{\left\{\frac{[\ce{H+}]}{K_{v_1}}+1+\frac{K_{v_2}}{[\ce{H+}]}+\frac{K_{v_2}K_{v_3}}{[\ce{H+}]^2}\right\}}^{\beta_1} + [\ce{H2VO4-}]^2\overbrace{\left\{2\frac{K_3}{[\ce{H+}]^2} + 2\frac{K_4}{[\ce{H+}]} + 2K_5\right\}}^{\beta_2} \\
+	+ [\ce{H2VO4-}]^3 \underbrace{\left\{3\frac{K_6}{[\ce{H+}]}\right\}}_{\beta_3} + [\ce{H2VO4-}]^4 \underbrace{\left\{ 4\frac{K_7}{[\ce{H+}]^2}+4K_8\right\}}_{\beta_4} + [\ce{H2VO4-}]^5 \underbrace{\left\{5K_9\right\}}_{\beta_5}						\label{eq:vanadium2}
+\end{multline}
+
+
+
+Eqs. (\ref{eq:charge2}) and (\ref{eq:vanadium2}) are then subtracted to eliminate the term containing $\mathrm{[CO_3^{2-}]^2}$, yielding:
+\begin{multline}
+	C_{\mathrm{K}} + [\ce{H+}] - [\ce{OH-}] - 3C_{\mathrm{V}} = [\ce{CO3^2-}]\left\{ 2 + \frac{[\ce{H+}]}{K_2} - K_{vc_1}[\ce{H2VO4}][\ce{H+}] \right\} \\
+	+ [\ce{H2VO4-}]\left(\alpha_1-3\beta_1\right) + [\ce{H2VO4-}]^2\left(\alpha_2-3\beta_2\right) +[\ce{H2VO4-}]^3\left(\alpha_3-3\beta_3\right) \\
+	+[\ce{H2VO4-}]^4\left(\alpha_4-3\beta_4\right) + [\ce{H2VO4-}]^5\left(\alpha_5-3\beta_5\right)
+\end{multline}
+
+
+As such, the carbonate concentration can be expressed as a function of [H$_2$VO$_4^-$] and [H$^+$]:
+\begin{multline}
+	[\ce{CO3^2-}] = \{C_{\mathrm{K}} + [\ce{H+}] - [\ce{OH-}] - 3C_{\mathrm{V}} - [\ce{H2VO4-}]\left(\alpha_1-3\beta_1\right) - [\ce{H2VO4-}]^2\left(\alpha_2-3\beta_2\right)		\\
+	- [\ce{H2VO4-}]^3\left(\alpha_3-3\beta_3\right) - [\ce{H2VO4-}]^4\left(\alpha_4-3\beta_4\right) - [\ce{H2VO4-}]^5\left(\alpha_5-3\beta_5\right)\} 	\\
+	/ \left\{2 + \frac{[\ce{H+}]}{K_2} - K_{vc_1}[\ce{H2VO4}][\ce{H+}]\right\}			\label{eq:carbonate}
+\end{multline}
+
+
+Eq. (\ref{eq:carbonate}) can be substituted into either the charge balance (eq. (\ref{eq:charge2})) or the vanadium balance (eq. (\ref{eq:vanadium2})). With [H$^+$] known, the resulting equations (eqs. (\ref{eq:carbonate}) and (\ref{eq:vanadium2}) in the MATLAB script) can be solved numerically (e.g., using \texttt{fsolve}) for [H$_2$VO$_4^-$] given an initial guess $0<[\mathrm{H_2VO_4^-}]<C_{\mathrm{V}}$. Once [H$_2$VO$_4^-$] is determined, the remaining species concentrations follow directly from the laws of mass action (eqs. (\ref{rxn:CO2.H2O})-(\ref{rxn:VC2})). Finally, the carbon balance and solvent loading (eq. (\ref{eq:carbon})) can be calculated.
+
+
+
+
+
+
+\bibliography{References}
+
+
+
+
+
+
+\end{document}
